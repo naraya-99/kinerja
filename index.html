@@ -82,9 +82,6 @@
         <button onclick="toggleBackupModal()" class="px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
           <i class="fa-solid fa-cloud-arrow-down text-sm"></i> Backup / Pulihkan Data
         </button>
-        <button onclick="toggleGithubModal()" class="px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
-          <i class="fa-brands fa-github text-sm"></i> Cara Online di GitHub
-        </button>
       </div>
     </div>
   </header>
@@ -387,47 +384,6 @@
 
     </div>
   </main>
-
-  <!-- Modal Panduan Onlinekan di GitHub Pages -->
-  <div id="githubModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-      <div class="flex justify-between items-center pb-3 border-b">
-        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-          <i class="fa-brands fa-github text-emerald-600"></i> Cara Membuka Website Ini Online Gratis di GitHub Pages
-        </h3>
-        <button onclick="toggleGithubModal()" class="text-slate-400 hover:text-slate-600">
-          <i class="fa-solid fa-xmark text-xl"></i>
-        </button>
-      </div>
-
-      <div class="mt-4 text-sm text-slate-600 space-y-3 leading-relaxed">
-        <p>Aplikasi ini berbentuk <strong>Single-Page File</strong> sehingga bisa langsung di-onlinekan tanpa perlu menyewa web hosting berbayar.</p>
-        
-        <ol class="list-decimal pl-5 space-y-2">
-          <li><strong>Simpan File:</strong> Simpan atau download kode ini dan beri nama file persis <code class="bg-slate-100 text-rose-600 px-1 py-0.5 rounded">index.html</code>.</li>
-          <li><strong>Buat Akun & Repo di GitHub:</strong> Masuk ke <a href="https://github.com" target="_blank" class="text-emerald-600 underline">github.com</a>, lalu klik <strong>New Repository</strong>.</li>
-          <li>Beri nama repositori (contoh: <code class="bg-slate-100 px-1 py-0.5 rounded">lkh-madrasah</code>) dan pilih <strong>Public</strong>.</li>
-          <li><strong>Upload File:</strong> Klik menu <em>Add file &gt; Upload files</em>, seret file <code class="bg-slate-100 px-1 py-0.5 rounded">index.html</code> yang tadi, lalu klik <strong>Commit changes</strong>.</li>
-          <li><strong>Aktifkan GitHub Pages:</strong>
-            <ul class="list-disc pl-5 mt-1 space-y-1">
-              <li>Buka tab <strong>Settings</strong> di repositori Anda.</li>
-              <li>Pilih menu <strong>Pages</strong> di bilah samping kiri.</li>
-              <li>Pada bagian <em>Branch</em>, ubah <span class="font-semibold">None</span> menjadi <span class="font-semibold">main</span> atau <span class="font-semibold">master</span>, lalu klik <strong>Save</strong>.</li>
-            </ul>
-          </li>
-          <li>Tunggu 1-2 menit. Repositori Anda akan memiliki link publik seperti: <br>
-            <code class="bg-emerald-50 text-emerald-700 font-mono text-xs p-1.5 rounded block mt-1">https://username-anda.github.io/lkh-madrasah/</code>
-          </li>
-        </ol>
-      </div>
-
-      <div class="mt-6 flex justify-end">
-        <button onclick="toggleGithubModal()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition">
-          Mengerti
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- Modal Backup & Restore Data (Menjaga Data Bertahun-tahun) -->
   <div id="backupModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
@@ -1365,28 +1321,21 @@
       html2pdf().set(opt).from(element).save().then(() => {
         noPrintElements.forEach(el => el.style.visibility = 'visible');
         showToast("File PDF berhasil diunduh!");
-      }).catch(err => {
-        noPrintElements.forEach(el => el.style.visibility = 'visible');
-        console.error(err);
-        showToast("Gagal mengunduh PDF. Silakan gunakan tombol Print.");
-      });
-    }
+    }).catch(err => {
+      noPrintElements.forEach(el => el.style.visibility = 'visible');
+      console.error(err);
+      showToast("Gagal mengunduh PDF. Silakan gunakan tombol Print.");
+    });
+  }
 
-    // Buka/Tutup Dialog GitHub Pages
-    function toggleGithubModal() {
-      const modal = document.getElementById('githubModal');
-      modal.classList.toggle('hidden');
-      modal.classList.toggle('flex');
-    }
+  // Buka/Tutup Dialog Backup & Restore
+  function toggleBackupModal() {
+    const modal = document.getElementById('backupModal');
+    modal.classList.toggle('hidden');
+    modal.classList.toggle('flex');
+  }
 
-    // Buka/Tutup Dialog Backup & Restore
-    function toggleBackupModal() {
-      const modal = document.getElementById('backupModal');
-      modal.classList.toggle('hidden');
-      modal.classList.toggle('flex');
-    }
-
-    // ==========================================
+  // ==========================================
     // CADANGKAN & PULIHKAN DATA (ARSIP TAHUNAN)
     // ==========================================
     function downloadBackupFile() {
