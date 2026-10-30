@@ -112,15 +112,15 @@
           <form id="activityForm" onsubmit="handleSaveActivity(event)" class="space-y-4">
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal Kegiatan</label>
-              <input type="date" id="actDate" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm">
-              <p id="weekendAlert" class="hidden text-xs text-rose-600 font-semibold mt-1 flex items-center gap-1">
-                <i class="fa-solid fa-circle-exclamation"></i> Hari Sabtu & Minggu (Ahad) libur! Tidak dapat menginput pekerjaan.
-              </p>
+              <input type="date" id="actDate" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm">
+              <div id="weekendAlert" class="hidden mt-1.5 p-2 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-1.5 font-medium">
+                <i class="fa-solid fa-triangle-exclamation"></i> Hari Sabtu & Minggu (Ahad) libur! Tidak dapat menginput pekerjaan.
+              </div>
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Hari/Tanggal (Otomatis)</label>
-              <input type="text" id="actDay" readonly placeholder="Contoh: Rabu, 2 Februari 2022" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm text-slate-600">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Hari & Tanggal Terformat</label>
+              <input type="text" id="actDay" readonly class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-slate-600 text-sm font-medium">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -135,8 +135,11 @@
             </div>
 
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Detail Pekerjaan</label>
-              <textarea id="actDescription" rows="4" required placeholder="Tuliskan uraian rincian pekerjaan di sini..." class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm"></textarea>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-medium text-slate-600">Detail Pekerjaan (Otomatis 1, 2, dst & Huruf Kapital)</label>
+                <span class="text-[10px] text-emerald-600 font-medium">Tekan Enter untuk poin baru</span>
+              </div>
+              <textarea id="actDescription" rows="4" required placeholder="1. Mulai tulis rincian pekerjaan di sini..." class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm"></textarea>
             </div>
 
             <div class="flex gap-2">
@@ -453,6 +456,7 @@
       initYearSelector();
       loadStoredData();
       setupDateInputListener();
+      setupActivityTextareaAutoNumber();
       setDefaultDates();
       renderProfileForm();
       renderLkhDoc();
@@ -510,12 +514,113 @@
     // Listener auto-detect hari dan jam kerja standar Kemenag / Madrasah
     function setupDateInputListener() {
       const actDateInput = document.getElementById('actDate');
+      if (!actDateInput) return;
+
       actDateInput.addEventListener('change', function() {
         updateDayFromDate(this.value);
       });
       // Dukung event input untuk deteksi instan saat memilih tanggal
       actDateInput.addEventListener('input', function() {
         updateDayFromDate(this.value);
+      });
+    }
+
+    // Penomoran otomatis (1., 2., dst) dan huruf kapital otomatis untuk detail pekerjaan
+    function setupActivityTextareaAutoNumber() {
+      const textarea = document.getElementById('actDescription');
+      if (!textarea) return;
+
+      // Saat focus jika masih kosong, langsung beri awalan "1. "
+      textarea.addEventListener('focus', function() {
+        if (!this.value.trim() && !this.disabled) {
+          this.value = "1. ";
+        }
+      });
+
+      // Huruf kapital otomatis di awal setiap butir/baris pekerjaan
+      textarea.addEventListener('input', function() {
+        const cursor = this.selectionStart;
+        const val = this.value;
+        if (!val) return;
+
+        // Jika user mengetik langsung tanpa angka
+        if (!/^\s*\d+\.\s*/.test(val) && val.trim().length > 0) {
+          const capitalized = val.charAt(0).toUpperCase() + val.slice(1);
+          this.value = "1. " + capitalized;
+          return;
+        }
+
+        // Format huruf kapital pada karakter pertama setelah "nomor. " di setiap baris
+        const lines = val.split('\n');
+        let changed = false;
+        const updatedLines = lines.map(line => {
+          const match = line.match(/^(\s*\d+\.\s*)([a-z])(.*)$/);
+          if (match) {
+            changed = true;
+            return match[1] + match[2].toUpperCase() + match[3];
+          }
+          return line;
+        });
+
+        if (changed) {
+          this.value = updatedLines.join('\n');
+          this.setSelectionRange(cursor, cursor);
+        }
+      });
+
+      // Deteksi tombol Enter (tambah nomor baru) dan Backspace (hapus nomor kosong)
+      textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const start = this.selectionStart;
+          const end = this.selectionEnd;
+          const textBefore = this.value.substring(0, start);
+          const textAfter = this.value.substring(end);
+          
+          const linesBefore = textBefore.split('\n');
+          const currentLine = linesBefore[linesBefore.length - 1];
+
+          // Jika baris saat ini hanya berisi nomor kosong (misal "2. "), tekan Enter untuk menghapusnya
+          const emptyNumMatch = currentLine.match(/^\s*(\d+)\.\s*$/);
+          if (emptyNumMatch) {
+            linesBefore[linesBefore.length - 1] = '';
+            this.value = linesBefore.join('\n') + textAfter;
+            const newCursor = linesBefore.join('\n').length;
+            this.setSelectionRange(newCursor, newCursor);
+            return;
+          }
+
+          // Cari nomor baris sebelumnya
+          const numMatch = currentLine.match(/^\s*(\d+)\.\s*/);
+          let nextNumber = 1;
+          if (numMatch) {
+            nextNumber = parseInt(numMatch[1], 10) + 1;
+          } else {
+            // Hitung nomor dari jumlah baris yang sudah ada
+            const totalNumbered = (this.value.match(/^\s*\d+\.\s*/gm) || []).length;
+            nextNumber = totalNumbered + 1;
+          }
+
+          const newLinePrefix = `\n${nextNumber}. `;
+          this.value = textBefore + newLinePrefix + textAfter;
+          const newPos = start + newLinePrefix.length;
+          this.setSelectionRange(newPos, newPos);
+        } else if (e.key === 'Backspace') {
+          const start = this.selectionStart;
+          const textBefore = this.value.substring(0, start);
+          const linesBefore = textBefore.split('\n');
+          const currentLine = linesBefore[linesBefore.length - 1];
+
+          // Jika kursor berada di akhir nomor kosong (seperti "2. "), hapus nomornya secara bersih
+          if (/^\s*\d+\.\s*$/.test(currentLine)) {
+            e.preventDefault();
+            const textAfter = this.value.substring(start);
+            linesBefore.pop();
+            this.value = (linesBefore.length > 0 ? linesBefore.join('\n') : '') + textAfter;
+            const newPos = linesBefore.length > 0 ? linesBefore.join('\n').length : 0;
+            this.setSelectionRange(newPos, newPos);
+          }
+        }
       });
     }
 
@@ -547,7 +652,9 @@
       const dayIndex = d.getDay();
       const dayName = INDO_DAYS[dayIndex];
       const indoFormatted = `${dayName}, ${formatIndoDate(dateStr)}`;
-      document.getElementById('actDay').value = indoFormatted;
+      
+      const actDayEl = document.getElementById('actDay');
+      if (actDayEl) actDayEl.value = indoFormatted;
 
       const weekendWarning = document.getElementById('weekendAlert');
       const submitBtn = document.getElementById('submitBtn');
@@ -558,21 +665,29 @@
       // Blokir otomatis bila Sabtu (6) atau Minggu/Ahad (0)
       if (dayIndex === 0 || dayIndex === 6) {
         if (weekendWarning) weekendWarning.classList.remove('hidden');
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        actStart.value = "-";
-        actEnd.value = "LIBUR";
-        actDesc.disabled = true;
-        actDesc.placeholder = "Hari Sabtu & Minggu (Ahad) libur / tidak bekerja.";
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        if (actStart) actStart.value = "-";
+        if (actEnd) actEnd.value = "LIBUR";
+        if (actDesc) {
+          actDesc.disabled = true;
+          actDesc.placeholder = "Hari Sabtu & Minggu (Ahad) libur / tidak bekerja.";
+        }
       } else {
         if (weekendWarning) weekendWarning.classList.add('hidden');
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        actDesc.disabled = false;
-        actDesc.placeholder = "Tuliskan uraian rincian pekerjaan di sini...";
-        actStart.value = "07.00 WIB";
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (actDesc) {
+          actDesc.disabled = false;
+          actDesc.placeholder = "1. Mulai tulis rincian pekerjaan di sini...";
+        }
+        if (actStart) actStart.value = "07.00 WIB";
         // Senin s.d. Kamis: 15.30 WIB, Jumat: 16.00 WIB
-        actEnd.value = (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
+        if (actEnd) actEnd.value = (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
       }
     }
 
@@ -702,7 +817,12 @@
       const startVal = document.getElementById('actStart').value.trim() || "07.00 WIB";
       // Pastikan jam selesai selalu konsisten: Jumat = 16.00 WIB, Senin-Kamis = 15.30 WIB
       const endVal = getStandardEndTime(dateVal);
-      const descVal = document.getElementById('actDescription').value.trim();
+      let descVal = document.getElementById('actDescription').value.trim();
+
+      // Normalisasi: Jika tidak ada nomor sama sekali, beri awalan 1. dan pastikan huruf awal kapital
+      if (descVal && !/^\s*\d+\.\s*/.test(descVal)) {
+        descVal = "1. " + descVal.charAt(0).toUpperCase() + descVal.slice(1);
+      }
 
       if(!dateVal || !descVal) return;
 
