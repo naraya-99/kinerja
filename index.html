@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -114,6 +113,9 @@
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal Kegiatan</label>
               <input type="date" id="actDate" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm">
+              <p id="weekendAlert" class="hidden text-xs text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i> Hari Sabtu & Minggu (Ahad) libur! Tidak dapat menginput pekerjaan.
+              </p>
             </div>
 
             <div>
@@ -485,6 +487,14 @@
     // Set tanggal default untuk form input
     function setDefaultDates() {
       const now = new Date();
+      // Jika hari ini Sabtu (6) atau Minggu (0), geser default ke hari Jumat sebelumnya atau Senin
+      const dayOfWeek = now.getDay();
+      if (dayOfWeek === 0) { // Minggu -> geser ke Jumat
+        now.setDate(now.getDate() - 2);
+      } else if (dayOfWeek === 6) { // Sabtu -> geser ke Jumat
+        now.setDate(now.getDate() - 1);
+      }
+
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
       const dd = String(now.getDate()).padStart(2, '0');
@@ -509,6 +519,16 @@
       });
     }
 
+    // Fungsi cek apakah hari libur (Sabtu/Minggu)
+    function isWeekend(dateStr) {
+      if(!dateStr) return false;
+      const parts = dateStr.split('-');
+      if(parts.length !== 3) return false;
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const dayIndex = d.getDay();
+      return (dayIndex === 0 || dayIndex === 6); // 0 = Minggu/Ahad, 6 = Sabtu
+    }
+
     // Fungsi mendapatkan jam selesai sesuai aturan hari kerja
     function getStandardEndTime(dateStr) {
       if(!dateStr) return "15.30 WIB";
@@ -529,8 +549,31 @@
       const indoFormatted = `${dayName}, ${formatIndoDate(dateStr)}`;
       document.getElementById('actDay').value = indoFormatted;
 
-      // Senin s.d. Kamis: 15.30 WIB, Jumat: 16.00 WIB
-      document.getElementById('actEnd').value = (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
+      const weekendWarning = document.getElementById('weekendAlert');
+      const submitBtn = document.getElementById('submitBtn');
+      const actStart = document.getElementById('actStart');
+      const actEnd = document.getElementById('actEnd');
+      const actDesc = document.getElementById('actDescription');
+
+      // Blokir otomatis bila Sabtu (6) atau Minggu/Ahad (0)
+      if (dayIndex === 0 || dayIndex === 6) {
+        if (weekendWarning) weekendWarning.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        actStart.value = "-";
+        actEnd.value = "LIBUR";
+        actDesc.disabled = true;
+        actDesc.placeholder = "Hari Sabtu & Minggu (Ahad) libur / tidak bekerja.";
+      } else {
+        if (weekendWarning) weekendWarning.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        actDesc.disabled = false;
+        actDesc.placeholder = "Tuliskan uraian rincian pekerjaan di sini...";
+        actStart.value = "07.00 WIB";
+        // Senin s.d. Kamis: 15.30 WIB, Jumat: 16.00 WIB
+        actEnd.value = (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
+      }
     }
 
     // Format nama dengan gelar M. Pd. yang benar (Nama HURUF BESAR, gelar M. Pd.)
@@ -649,6 +692,13 @@
     function handleSaveActivity(e) {
       e.preventDefault();
       const dateVal = document.getElementById('actDate').value;
+
+      // Validasi penolakan hari Sabtu & Minggu (Ahad)
+      if (isWeekend(dateVal)) {
+        showToast("Hari Sabtu dan Minggu libur. Tidak dapat disimpan!");
+        return;
+      }
+
       const startVal = document.getElementById('actStart').value.trim() || "07.00 WIB";
       // Pastikan jam selesai selalu konsisten: Jumat = 16.00 WIB, Senin-Kamis = 15.30 WIB
       const endVal = getStandardEndTime(dateVal);
@@ -1131,4 +1181,3 @@
   </script>
 </body>
 </html>
-```
